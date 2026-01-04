@@ -2,41 +2,58 @@ use std::sync::{Arc, Mutex};
 use tracing::{Level, Subscriber};
 use tracing_subscriber::{Layer, layer::Context, registry::LookupSpan};
 
-// Log entry structure
+/// A single log entry captured from tracing events.
+///
+/// This structure stores the log level and formatted message for display
+/// in the TUI log window.
 #[derive(Clone)]
 pub struct LogEntry {
+    /// The log level of this entry
     pub level: Level,
+    /// The formatted message text
     pub message: String,
 }
 
-// Log buffer for storing tracing output
+/// Thread-safe buffer for storing tracing log entries.
+///
+/// This buffer collects log entries from tracing events and makes them
+/// available for display in the TUI. It uses internal mutability with
+/// `Arc<Mutex<>>` to allow concurrent access.
 pub struct LogBuffer {
     entries: Arc<Mutex<Vec<LogEntry>>>,
 }
 
 impl LogBuffer {
+    /// Creates a new empty log buffer.
     pub fn new() -> Self {
         Self {
             entries: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
+    /// Adds a new log entry to the buffer.
     pub fn add_entry(&self, level: Level, message: String) {
         let mut entries = self.entries.lock().unwrap();
         entries.push(LogEntry { level, message });
     }
 
+    /// Retrieves all log entries currently in the buffer.
     pub fn get_entries(&self) -> Vec<LogEntry> {
         self.entries.lock().unwrap().clone()
     }
 }
 
-// Custom tracing layer that writes to LogBuffer
+/// Custom tracing layer that writes events to a `LogBuffer`.
+///
+/// This layer implements the `tracing_subscriber::Layer` trait to capture
+/// tracing events and format them into `LogEntry` structures that are stored
+/// in the associated `LogBuffer`.
 pub struct TuiTracingLayer {
     log_buffer: Arc<LogBuffer>,
 }
 
 impl TuiTracingLayer {
+    /// Creates a new tracing layer that writes to the specified log buffer.
     pub fn new(log_buffer: Arc<LogBuffer>) -> Self {
         Self { log_buffer }
     }

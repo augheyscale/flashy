@@ -1,12 +1,23 @@
-use std::sync::{Arc, Mutex};
 use flashlib::{LightId, Lights, OnOff};
+use std::sync::{Arc, Mutex};
 
+/// TUI implementation of the `Lights` trait.
+///
+/// This struct provides a thread-safe implementation of light state management
+/// for use in the terminal user interface. All lights are initialized to `Off`
+/// when created.
+///
+/// # Thread Safety
+///
+/// This implementation uses `Arc<Mutex<>>` internally to allow safe concurrent
+/// access from multiple threads.
 pub struct TuiLights {
     pub(crate) states: Arc<Mutex<[OnOff; LightId::num_lights()]>>,
 }
 
 impl TuiLights {
-    pub fn new() -> Self {
+    /// Creates a new `TuiLights` instance with all lights turned off.
+    pub fn new() -> impl Lights {
         Self {
             states: Arc::new(Mutex::new([OnOff::Off; LightId::num_lights()])),
         }
@@ -23,4 +34,3 @@ impl Lights for TuiLights {
         states[light_id.index()] = state;
     }
 }
-

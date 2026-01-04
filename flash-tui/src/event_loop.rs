@@ -8,12 +8,19 @@ use ratatui::prelude::*;
 use crate::tui_tracing;
 use crate::ui;
 
-/// Generic event loop function
+/// Generic event loop function for the TUI application.
+///
+/// This function runs the main event loop that:
+/// - Polls the provided handler function to update application state
+/// - Renders the UI (lights and log window)
+/// - Handles keyboard input (q, Esc, or Ctrl+C to quit)
+/// - Sleeps briefly to avoid busy-waiting
+///
+/// The loop continues until the user quits via keyboard input.
 pub async fn run_event_loop<F>(
     terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>,
     lights: &impl Lights,
     log_buffer: &tui_tracing::LogBuffer,
-    mut spinner: impl FnMut() -> char,
     mut poll_fn: F,
 ) -> anyhow::Result<()>
 where
@@ -27,11 +34,11 @@ where
 
         // Render
         terminal.draw(|frame| {
-            ui::render_lights(frame, lights, spinner(), log_buffer);
+            ui::render_lights(frame, lights, log_buffer);
         })?;
 
         // Handle events
-        if event::poll(Duration::from_millis(16))? {
+        if event::poll(Duration::from_millis(1))? {
             if let CrosstermEvent::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
@@ -63,4 +70,3 @@ where
 
     Ok(())
 }
-

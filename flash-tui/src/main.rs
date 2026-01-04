@@ -7,11 +7,11 @@ use crossterm::terminal::{
     EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
 };
 use flash_async::run_async_flasher;
-use flash_singlethreaded::{FlashPolled, FlashSleep, ManyPollBuilder};
+use flash_singlethreaded::{FlashPolled, ManyPoll, run_flash_sleep};
 use flashlib::{LightId, TimeSource};
 use ratatui::prelude::*;
 
-use flash_tui::{event_loop, lights, time_source, tui_tracing, ui};
+use flash_tui::{event_loop, lights, time_source, tui_tracing};
 
 #[derive(Parser, Debug)]
 #[command(name = "flash-tui")]
@@ -52,63 +52,78 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     execute!(stdout, EnterAlternateScreen)?;
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout))?;
 
+    // Create our interfaces to work in the TUI
     let lights = lights::TuiLights::new();
-    let time_source = time_source::TuiTimeSource;
-
-    let spinner = ui::spinner_chars();
+    let time_source = time_source::TuiTimeSource::new();
 
     // Match on mode and set up handler, then run the common event loop
     match args.mode {
         Mode::Polled => {
             tracing::info!("Initializing FlashPolled mode");
-            let mut flash_polled = FlashPolled::new(&time_source);
-            event_loop::run_event_loop(&mut terminal, &lights, &log_buffer, spinner, || {
-                flash_polled.poll(&lights, &time_source);
+            let mut flash_polled =
+                FlashPolled::new(LightId::One, &time_source.now(), Duration::from_secs(1))
+                    .ok_or_else(|| anyhow::anyhow!("Overflow"))?;
+            event_loop::run_event_loop(&mut terminal, &lights, &log_buffer, || {
+                flash_polled
+                    .poll(&lights, &time_source.now())
+                    .expect("Success");
+            })
+            .await?;
+        }
+        Mode::ManyPoll => {
+            tracing::info!("Initializing ManyPoll mode");
+            let mut many_poll = {
+                let start_time = time_source.now();
+                ManyPoll::new(vec![
+                    FlashPolled::new(LightId::One, &start_time, Duration::from_millis(250))
+                        .ok_or_else(|| anyhow::anyhow!("Overflow"))?,
+                    FlashPolled::new(LightId::Two, &start_time, Duration::from_millis(500))
+                        .ok_or_else(|| anyhow::anyhow!("Overflow"))?,
+                    FlashPolled::new(LightId::Three, &start_time, Duration::from_millis(750))
+                        .ok_or_else(|| anyhow::anyhow!("Overflow"))?,
+                    FlashPolled::new(LightId::Four, &start_time, Duration::from_millis(1000))
+                        .ok_or_else(|| anyhow::anyhow!("Overflow"))?,
+                ])
+            };
+
+            event_loop::run_event_loop(&mut terminal, &lights, &log_buffer, || {
+                many_poll
+                    .poll(&lights, &time_source.now())
+                    .expect("Success");
             })
             .await?;
         }
         Mode::Sleep => {
             tracing::info!("Initializing FlashSleep mode");
-            // Spawn background task for FlashSleep
+            // lights need to be shared between tasks, so we need to use Arc
             let lights = Arc::new(lights);
             let lights_for_task = lights.clone();
             let lights_for_task2 = lights.clone();
-            let start_time = time_source.now();
+
+            // Spawn two background tasks for run_flash_sleep
+            let start_time1 = time_source.now();
+            let start_time2 = start_time1.clone();
             tokio::spawn(async move {
-                let mut flash_sleep = FlashSleep::new(LightId::One, Duration::from_millis(250));
-                flash_sleep.run(
+                run_flash_sleep(
                     lights_for_task.as_ref(),
                     &time_source::TuiTimeSource,
-                    start_time,
-                );
+                    &start_time1,
+                    LightId::One,
+                    Duration::from_millis(250),
+                )
             });
             tokio::spawn(async move {
-                let mut flash_sleep = FlashSleep::new(LightId::Three, Duration::from_millis(250));
-                flash_sleep.run(
+                run_flash_sleep(
                     lights_for_task2.as_ref(),
                     &time_source::TuiTimeSource,
-                    start_time,
-                );
+                    &start_time2,
+                    LightId::Three,
+                    Duration::from_millis(500),
+                )
             });
 
             // No-op poll function since Sleep mode runs in background tasks
-            event_loop::run_event_loop(&mut terminal, lights.as_ref(), &log_buffer, spinner, || {})
-                .await?;
-        }
-        Mode::ManyPoll => {
-            tracing::info!("Initializing ManyPoll mode");
-            let start_time = time_source.now();
-            let mut many_poll_builder = ManyPollBuilder::new();
-            many_poll_builder.add_flasher(Duration::from_millis(250), LightId::One);
-            many_poll_builder.add_flasher(Duration::from_millis(500), LightId::Two);
-            many_poll_builder.add_flasher(Duration::from_millis(750), LightId::Three);
-            many_poll_builder.add_flasher(Duration::from_millis(1000), LightId::Four);
-            let mut many_poll = many_poll_builder.init(start_time);
-
-            event_loop::run_event_loop(&mut terminal, &lights, &log_buffer, spinner, || {
-                many_poll.poll(&lights, &time_source);
-            })
-            .await?;
+            event_loop::run_event_loop(&mut terminal, lights.as_ref(), &log_buffer, || {}).await?;
         }
         Mode::Async => {
             tracing::info!("Initializing AsyncFlashPolled mode");
@@ -117,28 +132,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let now = time_source.now();
 
             let task1 = run_async_flasher(
-                now,
+                &now,
                 LightId::One,
                 Duration::from_millis(250),
                 &lights,
                 &time_source::TuiTimeSource,
             );
             let task2 = run_async_flasher(
-                now,
+                &now,
                 LightId::Two,
                 Duration::from_millis(500),
                 &lights,
                 &time_source::TuiTimeSource,
             );
             let task3 = run_async_flasher(
-                now,
+                &now,
                 LightId::Three,
                 Duration::from_millis(750),
                 &lights,
                 &time_source::TuiTimeSource,
             );
             let task4 = run_async_flasher(
-                now,
+                &now,
                 LightId::Four,
                 Duration::from_millis(1000),
                 &lights,
@@ -146,8 +161,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
 
             // No-op poll function since AsyncPolled mode runs in background task
-            let event_loop =
-                event_loop::run_event_loop(&mut terminal, &lights, &log_buffer, spinner, || {});
+            let event_loop = event_loop::run_event_loop(&mut terminal, &lights, &log_buffer, || {});
 
             // wait for one task to complete
             tokio::select! {
