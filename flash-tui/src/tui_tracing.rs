@@ -19,18 +19,12 @@ pub struct LogEntry {
 /// This buffer collects log entries from tracing events and makes them
 /// available for display in the TUI. It uses internal mutability with
 /// `Arc<Mutex<>>` to allow concurrent access.
+#[derive(Default)]
 pub struct LogBuffer {
     entries: Arc<Mutex<Vec<LogEntry>>>,
 }
 
 impl LogBuffer {
-    /// Creates a new empty log buffer.
-    pub fn new() -> Self {
-        Self {
-            entries: Arc::new(Mutex::new(Vec::new())),
-        }
-    }
-
     /// Adds a new log entry to the buffer.
     pub fn add_entry(&self, level: Level, message: String) {
         let mut entries = self.entries.lock().unwrap();
@@ -69,7 +63,7 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for TuiTracingLayer {
         event.record(&mut visitor);
 
         let final_message = if visitor.message.is_empty() {
-            format!("{}", metadata.name())
+            metadata.name().to_string()
         } else {
             visitor.message
         };
@@ -145,4 +139,3 @@ impl tracing::field::Visit for MessageVisitor {
         }
     }
 }
-

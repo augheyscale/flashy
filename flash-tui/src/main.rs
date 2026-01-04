@@ -35,7 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
     // Setup log buffer and tracing
-    let log_buffer = Arc::new(tui_tracing::LogBuffer::new());
+    let log_buffer = Arc::new(tui_tracing::LogBuffer::default());
     let tracing_layer = tui_tracing::TuiTracingLayer::new(Arc::clone(&log_buffer));
 
     use tracing_subscriber::prelude::*;
@@ -53,8 +53,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout))?;
 
     // Create our interfaces to work in the TUI
-    let lights = lights::TuiLights::new();
-    let time_source = time_source::TuiTimeSource::new();
+    let lights = lights::TuiLights::default();
+    let time_source = time_source::TuiTimeSource;
 
     // Match on mode and set up handler, then run the common event loop
     match args.mode {

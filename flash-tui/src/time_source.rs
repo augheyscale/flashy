@@ -6,14 +6,8 @@ use std::time::{Duration, Instant};
 /// This struct provides a real-time implementation using the system clock
 /// and standard library sleep functions. For async operations, it uses
 /// Tokio's time utilities.
+#[derive(Default)]
 pub struct TuiTimeSource;
-
-impl TuiTimeSource {
-    /// Creates a new `TuiTimeSource` instance.
-    pub fn new() -> Self {
-        TuiTimeSource
-    }
-}
 
 #[derive(PartialEq, Clone)]
 pub struct WrappedInstant(Instant);

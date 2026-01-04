@@ -10,14 +10,14 @@ use std::sync::{Arc, Mutex};
 /// # Thread Safety
 ///
 /// This implementation uses `Arc<Mutex<>>` internally to allow safe concurrent
-/// access from multiple threads.
+/// access from multipole threads.
 pub struct TuiLights {
     pub(crate) states: Arc<Mutex<[OnOff; LightId::num_lights()]>>,
 }
 
-impl TuiLights {
+impl Default for TuiLights {
     /// Creates a new `TuiLights` instance with all lights turned off.
-    pub fn new() -> impl Lights {
+    fn default() -> Self {
         Self {
             states: Arc::new(Mutex::new([OnOff::Off; LightId::num_lights()])),
         }

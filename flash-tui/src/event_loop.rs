@@ -38,9 +38,9 @@ where
         })?;
 
         // Handle events
-        if event::poll(Duration::from_millis(1))? {
-            if let CrosstermEvent::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press {
+        if event::poll(Duration::from_millis(1))?
+            && let CrosstermEvent::Key(key) = event::read()?
+                && key.kind == KeyEventKind::Press {
                     match key.code {
                         KeyCode::Char('q') | KeyCode::Esc => {
                             should_quit = true;
@@ -53,8 +53,6 @@ where
                         _ => {}
                     }
                 }
-            }
-        }
 
         if should_quit {
             break;
