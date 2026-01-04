@@ -21,7 +21,11 @@ use crate::tui_tracing;
 /// * `frame` - The ratatui frame to render into
 /// * `lights` - The lights interface to query for current states
 /// * `log_buffer` - The log buffer containing tracing entries to display
-pub fn render_lights(frame: &mut Frame, lights: &impl Lights, log_buffer: &tui_tracing::LogBuffer) {
+pub fn render_lights(
+    frame: &mut Frame,
+    lights: &impl Lights,
+    log_buffer: &tui_tracing::LogBuffer,
+) -> anyhow::Result<()> {
     let states = LightId::all().map(|light_id| lights.get_state(light_id));
     let light_names = ["Light 1", "Light 2", "Light 3", "Light 4", "Light 5"];
 
@@ -46,7 +50,8 @@ pub fn render_lights(frame: &mut Frame, lights: &impl Lights, log_buffer: &tui_t
         ])
         .split(main_chunks[0]);
 
-    for (i, (chunk, &state)) in chunks.iter().zip(states.iter()).enumerate() {
+    for (i, (chunk, state)) in chunks.iter().zip(states.into_iter()).enumerate() {
+        let state = state?;
         let color = match state {
             OnOff::On => Color::Green,
             OnOff::Off => Color::DarkGray,
@@ -111,4 +116,5 @@ pub fn render_lights(frame: &mut Frame, lights: &impl Lights, log_buffer: &tui_t
         .wrap(Wrap { trim: true })
         .scroll((0, 0));
     frame.render_widget(log_paragraph, main_chunks[1]);
+    Ok(())
 }

@@ -34,25 +34,24 @@ where
 
         // Render
         terminal.draw(|frame| {
-            ui::render_lights(frame, lights, log_buffer);
+            ui::render_lights(frame, lights, log_buffer).expect("success");
         })?;
 
         // Handle events
         if event::poll(Duration::from_millis(1))?
             && let CrosstermEvent::Key(key) = event::read()?
-                && key.kind == KeyEventKind::Press {
-                    match key.code {
-                        KeyCode::Char('q') | KeyCode::Esc => {
-                            should_quit = true;
-                        }
-                        KeyCode::Char('c')
-                            if key.modifiers.contains(event::KeyModifiers::CONTROL) =>
-                        {
-                            should_quit = true;
-                        }
-                        _ => {}
-                    }
+            && key.kind == KeyEventKind::Press
+        {
+            match key.code {
+                KeyCode::Char('q') | KeyCode::Esc => {
+                    should_quit = true;
                 }
+                KeyCode::Char('c') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
+                    should_quit = true;
+                }
+                _ => {}
+            }
+        }
 
         if should_quit {
             break;

@@ -25,12 +25,19 @@ impl Default for TuiLights {
 }
 
 impl Lights for TuiLights {
-    fn get_state(&self, light_id: LightId) -> OnOff {
-        self.states.lock().unwrap()[light_id.index()]
+    fn get_state(&self, light_id: LightId) -> anyhow::Result<OnOff> {
+        Ok(*self
+            .states
+            .lock()
+            .unwrap()
+            .get(light_id.index())
+            .ok_or_else(|| anyhow::anyhow!("Light index out of bounds"))?)
     }
-
-    fn set_state(&self, light_id: LightId, state: OnOff) {
+    fn set_state(&self, light_id: LightId, state: OnOff) -> anyhow::Result<()> {
         let mut states = self.states.lock().unwrap();
-        states[light_id.index()] = state;
+        *states
+            .get_mut(light_id.index())
+            .ok_or_else(|| anyhow::anyhow!("Light index out of bounds"))? = state;
+        Ok(())
     }
 }

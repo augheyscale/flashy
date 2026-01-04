@@ -23,10 +23,10 @@ pub async fn run_async_flasher<TS: TimeSource>(
 
     loop {
         next_wakeup_time = sleep_for(&next_wakeup_time, sleep_duration, time_source).await?;
-        lights.set_state(light_to_toggle, OnOff::On);
+        lights.set_state(light_to_toggle, OnOff::On)?;
 
         next_wakeup_time = sleep_for(&next_wakeup_time, sleep_duration, time_source).await?;
-        lights.set_state(light_to_toggle, OnOff::Off);
+        lights.set_state(light_to_toggle, OnOff::Off)?;
     }
 }
 

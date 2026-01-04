@@ -71,18 +71,19 @@ impl OnOff {
 /// interchangeably.
 pub trait Lights {
     /// Gets the current state of the specified light.
-    fn get_state(&self, light_id: LightId) -> OnOff;
+    fn get_state(&self, light_id: LightId) -> anyhow::Result<OnOff>;
 
     /// Sets the state of the specified light.
-    fn set_state(&self, light_id: LightId, state: OnOff);
+    fn set_state(&self, light_id: LightId, state: OnOff) -> anyhow::Result<()>;
 
     /// Sets all lights to the same state.
     ///
     /// This is a convenience method that calls `set_state` for each light.
-    fn set_all_lights(&self, state: OnOff) {
+    fn set_all_lights(&self, state: OnOff) -> anyhow::Result<()> {
         for light_id in LightId::all() {
-            self.set_state(*light_id, state);
+            self.set_state(*light_id, state)?;
         }
+        Ok(())
     }
 }
 

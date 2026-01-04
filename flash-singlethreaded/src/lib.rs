@@ -34,16 +34,13 @@ impl<AbsoluteTime: TimeAdd> FlashPolled<AbsoluteTime> {
     /// the light state and schedules the next toggle.
     pub fn poll(&mut self, lights: &impl Lights, now: &AbsoluteTime) -> anyhow::Result<()> {
         if now >= &self.next_toggle_time {
-            tracing::debug!("Toggling light state to {:?}", self.next_flash_state);
-            lights.set_state(self.light_id, self.next_flash_state);
+            lights.set_state(self.light_id, self.next_flash_state)?;
+
             self.next_toggle_time = now
                 .checked_add(self.sleep_duration)
                 .ok_or_else(|| anyhow::anyhow!("Overflow"))?;
+
             self.next_flash_state = self.next_flash_state.other();
-            tracing::info!(
-                "Light toggled, next toggle in {:?} seconds",
-                self.sleep_duration.as_secs_f32()
-            );
         }
         Ok(())
     }
@@ -63,15 +60,15 @@ pub fn run_flash_sleep<TS: TimeSource>(
     light_to_toggle: LightId,
     sleep_duration: Duration,
 ) -> anyhow::Result<()> {
-    tracing::info!("FlashSleep task started");
     let mut next_wakeup_time = start_time
         .checked_add(sleep_duration)
         .ok_or_else(|| anyhow::anyhow!("Overflow"))?;
+
     loop {
         next_wakeup_time = sleep_for(&next_wakeup_time, sleep_duration, time_source)?;
-        lights.set_state(light_to_toggle, OnOff::On);
+        lights.set_state(light_to_toggle, OnOff::On)?;
         next_wakeup_time = sleep_for(&next_wakeup_time, sleep_duration, time_source)?;
-        lights.set_state(light_to_toggle, OnOff::Off);
+        lights.set_state(light_to_toggle, OnOff::Off)?;
     }
 }
 
