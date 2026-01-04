@@ -1,0 +1,3 @@
+[workspace]
+members = ["flashlib", "flash-tui", "flash-singlethreaded", "flash-async"]
+resolver = "3"

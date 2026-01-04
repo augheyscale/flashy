@@ -1,0 +1,8 @@
+[package]
+name = "flash-singlethreaded"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+flashlib = { version = "0.1.0", path = "../flashlib" }
+tracing = "0.1.44"
