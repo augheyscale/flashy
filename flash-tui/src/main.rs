@@ -163,7 +163,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // No-op poll function since AsyncPolled mode runs in background task
             let event_loop = event_loop::run_event_loop(&mut terminal, &lights, &log_buffer, || {});
 
-            // wait for one task to complete
+            // wait for any task to complete
             tokio::select! {
                 result = task1 => result?,
                 result = task2 => result?,

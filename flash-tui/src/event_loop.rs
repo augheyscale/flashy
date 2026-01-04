@@ -26,8 +26,6 @@ pub async fn run_event_loop<F>(
 where
     F: FnMut(),
 {
-    let mut should_quit = false;
-
     loop {
         // Poll the handler logic
         poll_fn();
@@ -38,27 +36,24 @@ where
         })?;
 
         // Handle events
-        if event::poll(Duration::from_millis(1))?
+        if event::poll(Duration::from_secs(0))?
             && let CrosstermEvent::Key(key) = event::read()?
             && key.kind == KeyEventKind::Press
         {
             match key.code {
                 KeyCode::Char('q') | KeyCode::Esc => {
-                    should_quit = true;
+                    break;
                 }
                 KeyCode::Char('c') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
-                    should_quit = true;
+                    break;
                 }
                 _ => {}
             }
         }
 
-        if should_quit {
-            break;
-        }
-
         // Small sleep to avoid busy-waiting
         tokio::time::sleep(Duration::from_millis(16)).await;
+        //tokio::task::yield_now().await;
     }
 
     // Terminal cleanup
